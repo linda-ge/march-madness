@@ -1,5 +1,8 @@
 import numpy as np
+<<<<<<< HEAD
 import pandas as pd
+=======
+>>>>>>> 5ef10785d7ea40dc89f632a4bfa43ff04d8efef9
 from scipy import io as sio
 from matplotlib import pyplot as plt
 from random import shuffle as shuffle
@@ -23,15 +26,19 @@ def stoch_update(w, epsilon, X_i_t, y_i, s_i, lmbda):
 	return w_u
 def loss_func(w, y, s, lmbda):
 	y = np.transpose(y)
+<<<<<<< HEAD
 	if s.any() == 0: print "we have a problem"
 	s[s == 1] = .999999999 #preventing zeroes
 	# if np.subtract(1,s).any() == 0: print "we have a subs prob"
+=======
+>>>>>>> 5ef10785d7ea40dc89f632a4bfa43ff04d8efef9
 	loss = -1 * np.dot(y, np.log(s)) - np.dot(np.subtract(1, y), np.log(np.subtract(1, s))) + lmbda*np.linalg.norm(w)**2
 	return loss[0][0]
 
 ## TODO: find data format, extract data
 ##	Do we need to add a feature to indicate game type
 ##  What other features could we use? 
+<<<<<<< HEAD
 def treat_data(data_frame): #takes a list of filenames
 	data_frame.drop(labels=['Season', 'WLoc'], inplace=True, axis=1)	
 	inv_cols = ['DayNum', 'LTeamID', 'LScore', 'WTeamID', 'WScore' , 'NumOT', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF','WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF']
@@ -182,6 +189,12 @@ def test_batch_grad_1s_on_tourney(year):
 	print "classification accuracy:" + str(np.sum(classification)/float(len(classification)))
 
 test_batch_grad_1s_on_tourney(2003)
+=======
+def treat_data(filenames): #takes a list of fileanams
+	## TODO: implement this method
+	pass
+
+>>>>>>> 5ef10785d7ea40dc89f632a4bfa43ff04d8efef9
 ## TODO: graph error rate for different learning rates training on validiting on a season at the time
 def find_eps_lmd():
 	## TODO: implement this method
@@ -197,11 +210,17 @@ def batch_grad_1s():
 def batch_grad_all():
 	## TODO: implement this method
 	pass
+<<<<<<< HEAD
 
 ## TODO: implement gradient for one season at the time, average the weights, validate on 20% combined games of all seasons
 def batch_grad_av():
 	## TODO: impement this method
 	pass
+=======
+## TODO: implement gradient for one season at the time, average the weights, validate on 20% combined games of all seasons
+def batch_grad_av():
+	## TODO: impement this method
+>>>>>>> 5ef10785d7ea40dc89f632a4bfa43ff04d8efef9
 def run_batch():
 	data = sio.loadmat("data.mat")
 	X = data["X"]
@@ -329,4 +348,8 @@ def run_stoch_dec_epsilon():
 	plt.savefig("stoch_dec.png")
 
 # run_stoch()
+<<<<<<< HEAD
 # run_stoch_dec_epsilon()
+=======
+run_stoch_dec_epsilon()
+>>>>>>> 5ef10785d7ea40dc89f632a4bfa43ff04d8efef9
