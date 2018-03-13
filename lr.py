@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 from scipy import io as sio
+from scipy import special
 from matplotlib import pyplot as plt
 from random import shuffle as shuffle
 #logistic regression bath gradient descent
 
 def func_s(v): #v is the result of np.dot(X,w)
-	vec_s = np.apply_along_axis(lambda x: 1/(1 + np.exp(-x)), 0, v)
+	vec_s = np.apply_along_axis(lambda x: special.expit(x), 0, v)
 	return vec_s
 
 def stoch_s(X_iw):
@@ -14,6 +15,7 @@ def stoch_s(X_iw):
 
 def batch_update(w, epsilon, X_t, y, s, lmbda):
 	w_u = np.add(w, np.multiply(epsilon, np.dot(X_t, np.subtract(y, s)))) - epsilon*lmbda*w*2
+	# w_u = np.add(w, np.multiply(epsilon, np.dot(X_t, np.subtract(y, s)))) 
 	return w_u
 
 def stoch_update(w, epsilon, X_i_t, y_i, s_i, lmbda):
@@ -21,11 +23,14 @@ def stoch_update(w, epsilon, X_i_t, y_i, s_i, lmbda):
 	second_mult = np.multiply(X_i_t, first_mult)
 	w_u =  np.add(w, second_mult) - epsilon*lmbda*w*2
 	return w_u
+
 def loss_func(w, y, s, lmbda):
 	y = np.transpose(y)
-	s[s == 1] = .999999999 #preventing zeroes
+	s[s == 1] = 0.9999999999999 #preventing zeroes
+	s[s == 0] = 0.0000000000001
 	# if np.subtract(1,s).any() == 0: print "we have a subs prob"
 	loss = -1 * np.dot(y, np.log(s)) - np.dot(np.subtract(1, y), np.log(np.subtract(1, s))) + lmbda*np.linalg.norm(w)**2
+	# loss = -1 * np.dot(y, np.log(s)) - np.dot(np.subtract(1, y), np.log(np.subtract(1, s))) 
 	return loss[0][0]
 
 ## TODO: find data format, extract data
@@ -43,12 +48,43 @@ def treat_data(data_frame): #takes a list of filenames
 			data_frame.loc[i, norm_cols] = data_frame.loc[i, inv_cols].values
 		else:
 			win.append(1)
+		# compute point difference 
+		scoreDiff = data_frame.loc[i]["WScore"] - data_frame.loc[i]["LScore"]
+		fgmDiff = data_frame.loc[i]["WFGM"] - data_frame.loc[i]["LFGM"]
+		fgaDiff = data_frame.loc[i]["WFGA"] - data_frame.loc[i]["LFGA"]
+		fgm3Diff = data_frame.loc[i]["WFGM3"] - data_frame.loc[i]["LFGM3"]
+		fga3Diff = data_frame.loc[i]["WFGA3"] - data_frame.loc[i]["LFGA3"]
+		ftmDiff = data_frame.loc[i]["WFTM"] - data_frame.loc[i]["LFTM"]
+		ftaDiff = data_frame.loc[i]["WFTA"] - data_frame.loc[i]["LFTA"]
+		orDiff = data_frame.loc[i]["WOR"] - data_frame.loc[i]["LOR"]
+		drDiff = data_frame.loc[i]["WDR"] - data_frame.loc[i]["LDR"]
+		astDiff = data_frame.loc[i]["WAst"] - data_frame.loc[i]["LAst"]
+		toDiff = data_frame.loc[i]["WTO"] - data_frame.loc[i]["LTO"]
+		stlDiff = data_frame.loc[i]["WStl"] - data_frame.loc[i]["LStl"]
+		blkDiff = data_frame.loc[i]["WBlk"] - data_frame.loc[i]["LBlk"]
+		pfDiff = data_frame.loc[i]["WPF"] - data_frame.loc[i]["LPF"]
+		data_frame.loc[i]["WScore"] = scoreDiff
+		data_frame.loc[i]["WFGM"] = fgmDiff
+		data_frame.loc[i]["WFGA"] = fgaDiff
+		data_frame.loc[i]["WFGM3"] = fgm3Diff
+		data_frame.loc[i]["WFGA3"] = fga3Diff
+		data_frame.loc[i]["WFTM"] = ftmDiff
+		data_frame.loc[i]["WFTA"] = ftaDiff
+		data_frame.loc[i]["WOR"] = orDiff
+		data_frame.loc[i]["WDR"] = drDiff
+		data_frame.loc[i]["WAst"] = astDiff
+		data_frame.loc[i]["WTO"] = toDiff
+		data_frame.loc[i]["WStl"] = stlDiff
+		data_frame.loc[i]["WBlk"] = blkDiff
+		data_frame.loc[i]["WPF"] = pfDiff
+	data_frame.drop(labels=['LTeamID', 'WTeamID', 'NumOT', 'DayNum', 'LScore', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', "LFTA", "LOR", "LDR", "LAst", "LTO", "LStl", "LBlk", "LPF"], inplace=True, axis=1)
+	print data_frame.head()
 	data_mat = data_frame.as_matrix()
-	np.random.shuffle(data_mat)
+	# np.random.shuffle(data_mat)
+	np.save("data/treated2003.npy", data_mat)
 	win = np.array(win)
-	print win.shape
 	win = win.reshape((len(win), 1))
-	print win.shape
+	np.save("data/treated2003Cls.npy", win)
 	return data_mat, win
 
 def get_data_by_season(year): #input is an int
@@ -65,14 +101,14 @@ def test_batch_grad_1s(year):
 	dim_feature = len(X[0])
 	w = np.zeros((dim_feature, 1))
 	X_t = np.transpose(X)
-	lmbda = 0.0005
-	epsilon = 0.00000000005
+	lmbda = 0.005
+	epsilon = 0.8
 	#compute the first s to have the loss at the first step
 	s = func_s(np.dot(X, w))
 	loss = [loss_func(w, y, s, lmbda)]
 	iter_count = [0]
 	#loop
-	while iter_count[-1] < 10000:
+	while iter_count[-1] < 30000:
 
 		#for each iteration we compute w, the new s and save the loss.
 		w = batch_update(w, epsilon, X_t, y, s, lmbda)
@@ -83,7 +119,14 @@ def test_batch_grad_1s(year):
 	plt.title("Batch Gradient Descent epsilon:")
 	plt.savefig("batch.png")
 
-#test_batch_grad_1s(2003)
+# test_batch_grad_1s(2003)
+def read_treated_data(year):
+	data_filename= "data/treated" + str(year) + ".npy"
+	cls_filename = "data/treated" + str(year) + "Cls.npy"
+	data = np.load(data_filename)
+	cls_ = np.load(data_filename)
+	return data, cls_
+
 
 def validate_batch_grad_1s(year):
 	#TODO:implement this method
@@ -104,8 +147,8 @@ def validate_batch_grad_1s(year):
 	dim_feature = len(training_X[0])
 	w = np.zeros((dim_feature, 1))
 	X_t = np.transpose(training_X)
-	lmbda = 0.0005
-	epsilon = 0.00000000005
+	lmbda = 0.005
+	epsilon = 0.5
 	#compute the first s to have the loss at the first step
 	s = func_s(np.dot(training_X, w))
 	loss = [loss_func(w, training_y, s, lmbda)]
@@ -117,6 +160,7 @@ def validate_batch_grad_1s(year):
 		s = func_s(np.dot(training_X, w)) 
 		iter_count.append(iter_count[-1] + 1)
 		loss.append(loss_func(w, training_y, s, lmbda))
+	print loss
 	plt.plot(iter_count, loss)
 	plt.title("Batch Gradient Descent Training epsilon:")
 	plt.savefig("batch_training.png")
@@ -133,34 +177,35 @@ def validate_batch_grad_1s(year):
 	classification[classification < .5] = 0
 	print "classification accuracy:" + str(np.sum(classification)/float(len(classification)))
 
-#validate_batch_grad_1s(2003)
+# validate_batch_grad_1s(2003)
 
 def test_batch_grad_1s_on_tourney(year):
-	season_data = get_data_by_season(year)
-	X, y= treat_data(season_data)
-
+	# season_data = get_data_by_season(year)
+	# X, y= treat_data(season_data)
+	X, y= read_treated_data(year)
 	training_X = X
 	training_y = y
 
 	## Run the batch grad with X and Y
 	## will be different then the code below since we are operating on a dataframe object 
 	dim_feature = len(training_X[0])
-	w = np.zeros((dim_feature, 1))
+	w = np.ones((dim_feature, 1))
 	X_t = np.transpose(training_X)
 	lmbda = 0.0005
-	epsilon = 0.00000000005
+	epsilon = 0.00000005
 	#compute the first s to have the loss at the first step
 	s = func_s(np.dot(training_X, w))
 	loss = [loss_func(w, training_y, s, lmbda)]
 	iter_count = [0]
 	#loop
-	while iter_count[-1] < 10000:
+	while iter_count[-1] < 30000:
 		#for each iteration we compute w, the new s and save the loss.
 		w = batch_update(w, epsilon, X_t, training_y, s, lmbda)
 		s = func_s(np.dot(training_X, w)) 
 		iter_count.append(iter_count[-1] + 1)
 		loss.append(loss_func(w, training_y, s, lmbda))
-
+	print w
+	print loss[-1]
 	plt.plot(iter_count, loss)
 	plt.title("Batch Gradient Descent Training epsilon:")
 	plt.savefig("tourney_training.png")
@@ -172,20 +217,47 @@ def test_batch_grad_1s_on_tourney(year):
 	for i in xrange(len(to_classify)):
 		cls_ = np.asarray(func_s(np.dot(np.asmatrix(to_classify[i]), w)))[0][0]
 		classification.append(cls_)
-
+	classification = np.array(classification)
 	with open("tourney_test_results.txt", "w+") as f:
 		for i, elem in enumerate(classification):
 			f.write(str(elem) + ", " + str(answers[i]) + "\n")
 	classification[classification >= .5] = 1
 	classification[classification < .5] = 0
-	print "classification accuracy:" + str(np.sum(classification)/float(len(classification)))
+	classification = classification.reshape((64, 1))
+	print "classification accuracy: " + str(np.sum(classification == answers)/float(len(answers)))
 
 test_batch_grad_1s_on_tourney(2003)
 
 ## TODO: graph error rate for different learning rates training on validiting on a season at the time
-def find_eps_lmd():
-	## TODO: implement this method
-	pass
+def find_eps_lmd(year, eps_arr, lmbda_arr):
+	season_data = get_data_by_season(year)
+	X, y = treat_data(season_data)
+	for i in range(len(eps_arr)):
+		for j in range(len(lmbda_arr)):
+			## Run the batch grad with X and Y
+			## will be different then the code below since we are operating on a dataframe object 
+			dim_feature = len(X[0])
+			w = np.zeros((dim_feature, 1))
+			X_t = np.transpose(X)
+			epsilon = eps_arr[i]
+			lmbda = lmbda_arr[j]
+			#compute the first s to have the loss at the first step
+			s = func_s(np.dot(X, w))
+			loss = [loss_func(w, y, s, lmbda)]
+			iter_count = [0]
+			#loop
+			while iter_count[-1] < 50000:
+
+				#for each iteration we compute w, the new s and save the loss.
+				w = batch_update(w, epsilon, X_t, y, s, lmbda)
+				s = func_s(np.dot(X, w)) 
+				iter_count.append(iter_count[-1] + 1)
+				loss.append(loss_func(w, y, s, lmbda))
+			plt.plot(iter_count, loss)
+			plt.title("Batch Gradient Descent epsilon:")
+			plt.savefig("batch_" + str(i) + "_" + str(j) + ".png")
+			plt.clf()
+# find_eps_lmd(2003, [0.04, 0.00005, 0.00000000005, 0.000000000005, 0.000000000005], [0.5, 0.05, 0.0005, 0.000005])
 ## TODO: With given epsilon and lambda compte batch gradient descent on a season at the time
 def batch_grad_1s():
 	## TODO: implement this method
@@ -206,6 +278,8 @@ def batch_grad_av():
 ## TODO: implement gradient for one season at the time, average the weights, validate on 20% combined games of all seasons
 def batch_grad_av():
 	## TODO: impement this method
+	pass
+
 
 def run_batch():
 	data = sio.loadmat("data.mat")
@@ -215,8 +289,8 @@ def run_batch():
 	dim_feature = len(X[0])
 	w = np.zeros((dim_feature, 1))
 	X_t = np.transpose(X)
-	lmbda = 0.05
-	epsilon = 0.00000005
+	lmbda = 0.005
+	epsilon = 0.5
 	#compute the first s to have the loss at the first step
 	s = func_s(np.dot(X, w))
 	loss = [loss_func(w, y, s, lmbda)]
