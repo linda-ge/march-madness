@@ -35,11 +35,40 @@ def loss_func(w, y, s, lmbda):
 
 ## TODO: find data format, extract data
 ##	Do we need to add a feature to indicate game type
-##  What other features could we use? 
-def treat_data(data_frame): #takes a list of filenames
+##  What other features could we use?
+def get_average_stats(year): #TODO: make everything numpy arrays and add as if they were matrices
+	## compiles the average stats
+	data_set = pd.read_csv('data/RegularSeasonDetailedResults_Prelim2018.csv')
+	season = data_set.loc[data_set["Season"] == year]
+	season.reset_index(drop=True, inplace=True)
+	avTable = np.zeros((1000, 14))
+	counter = [0.0]*1000
+	for i in range(len(season)):
+		#get the stats of both ids
+		id1 = season.loc[i]["WTeamID"]
+		id_1 = id1 - 1000
+		mat_1 = season.loc[i, ['WScore', 'WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF']].as_matrix()
+		mat_1 = mat_1.astype('f')
+		avTable[id_1] += mat_1
+		counter[id_1] += 1
+		
+		id2 = season.loc[i]["LTeamID"]
+		id_2 = id2 - 1000
+		mat_2 = season.loc[i, ['LScore', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF']].as_matrix()
+		mat_2 = mat_2.astype('f')
+		avTable[id_2] += mat_2
+		counter[id_2] += 1
+
+	for i in range(1000):
+		if counter[i] > 0:
+			avTable[i] = avTable[i] / counter[i]
+
+	return season, avTable
+def treat_data(data_frame, avTable):
 	data_frame.drop(labels=['Season', 'WLoc'], inplace=True, axis=1)	
 	inv_cols = ['DayNum', 'LTeamID', 'LScore', 'WTeamID', 'WScore' , 'NumOT', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF','WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF']
 	norm_cols = ['DayNum', 'WTeamID', 'WScore', 'LTeamID', 'LScore', 'NumOT', 'WFGM', 'WFGA', 'WFGM3', 'WFGA3', 'WFTM', 'WFTA', 'WOR', 'WDR', 'WAst', 'WTO', 'WStl', 'WBlk', 'WPF', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', 'LFTA', 'LOR', 'LDR', 'LAst', 'LTO', 'LStl', 'LBlk', 'LPF']
+	data_mat = np.zeros((len(data_frame), 14))
 	win = []
 	for i in range(len(data_frame)):
 		if data_frame.loc[i]["WTeamID"] > data_frame.loc[i]["LTeamID"]:
@@ -48,365 +77,207 @@ def treat_data(data_frame): #takes a list of filenames
 			data_frame.loc[i, norm_cols] = data_frame.loc[i, inv_cols].values
 		else:
 			win.append(1)
-		# compute point difference 
-		scoreDiff = data_frame.loc[i]["WScore"] - data_frame.loc[i]["LScore"]
-		fgmDiff = data_frame.loc[i]["WFGM"] - data_frame.loc[i]["LFGM"]
-		fgaDiff = data_frame.loc[i]["WFGA"] - data_frame.loc[i]["LFGA"]
-		fgm3Diff = data_frame.loc[i]["WFGM3"] - data_frame.loc[i]["LFGM3"]
-		fga3Diff = data_frame.loc[i]["WFGA3"] - data_frame.loc[i]["LFGA3"]
-		ftmDiff = data_frame.loc[i]["WFTM"] - data_frame.loc[i]["LFTM"]
-		ftaDiff = data_frame.loc[i]["WFTA"] - data_frame.loc[i]["LFTA"]
-		orDiff = data_frame.loc[i]["WOR"] - data_frame.loc[i]["LOR"]
-		drDiff = data_frame.loc[i]["WDR"] - data_frame.loc[i]["LDR"]
-		astDiff = data_frame.loc[i]["WAst"] - data_frame.loc[i]["LAst"]
-		toDiff = data_frame.loc[i]["WTO"] - data_frame.loc[i]["LTO"]
-		stlDiff = data_frame.loc[i]["WStl"] - data_frame.loc[i]["LStl"]
-		blkDiff = data_frame.loc[i]["WBlk"] - data_frame.loc[i]["LBlk"]
-		pfDiff = data_frame.loc[i]["WPF"] - data_frame.loc[i]["LPF"]
-		data_frame.loc[i]["WScore"] = scoreDiff
-		data_frame.loc[i]["WFGM"] = fgmDiff
-		data_frame.loc[i]["WFGA"] = fgaDiff
-		data_frame.loc[i]["WFGM3"] = fgm3Diff
-		data_frame.loc[i]["WFGA3"] = fga3Diff
-		data_frame.loc[i]["WFTM"] = ftmDiff
-		data_frame.loc[i]["WFTA"] = ftaDiff
-		data_frame.loc[i]["WOR"] = orDiff
-		data_frame.loc[i]["WDR"] = drDiff
-		data_frame.loc[i]["WAst"] = astDiff
-		data_frame.loc[i]["WTO"] = toDiff
-		data_frame.loc[i]["WStl"] = stlDiff
-		data_frame.loc[i]["WBlk"] = blkDiff
-		data_frame.loc[i]["WPF"] = pfDiff
-	data_frame.drop(labels=['LTeamID', 'WTeamID', 'NumOT', 'DayNum', 'LScore', 'LFGM', 'LFGA', 'LFGM3', 'LFGA3', 'LFTM', "LFTA", "LOR", "LDR", "LAst", "LTO", "LStl", "LBlk", "LPF"], inplace=True, axis=1)
-	print data_frame.head()
-	data_mat = data_frame.as_matrix()
-	# np.random.shuffle(data_mat)
-	np.save("data/treated2003.npy", data_mat)
+		# compute point difference
+		id_1 = data_frame.loc[i]['WTeamID'] - 1000 
+		mat_1 = avTable[id_1]
+		id_2 = data_frame.loc[i]['LTeamID'] - 1000
+		mat_2 = avTable[id_2]
+
+		diff_mat = mat_1 - mat_2
+		data_mat[i] += diff_mat
 	win = np.array(win)
 	win = win.reshape((len(win), 1))
-	np.save("data/treated2003Cls.npy", win)
 	return data_mat, win
 
-def get_data_by_season(year): #input is an int
-	data_set = pd.read_csv("data/RegularSeasonDetailedResults.csv")
-	season = data_set.loc[data_set["Season"] == year]
-	return season
+# def get_data_by_season(year): #input is an int
+# 	data_set = pd.read_csv("data/RegularSeasonDetailedResults.csv")
+# 	season = data_set.loc[data_set["Season"] == year]
+# 	season.reset_index(drop=True, inplace=True)
+# 	return season
 
-def test_batch_grad_1s(year):
-	season_data = get_data_by_season(year)
-	X, y = treat_data(season_data)
-
-	## Run the batch grad with X and Y
-	## will be different then the code below since we are operating on a dataframe object 
-	dim_feature = len(X[0])
-	w = np.zeros((dim_feature, 1))
-	X_t = np.transpose(X)
-	lmbda = 0.005
-	epsilon = 0.8
-	#compute the first s to have the loss at the first step
-	s = func_s(np.dot(X, w))
-	loss = [loss_func(w, y, s, lmbda)]
-	iter_count = [0]
-	#loop
-	while iter_count[-1] < 30000:
-
-		#for each iteration we compute w, the new s and save the loss.
-		w = batch_update(w, epsilon, X_t, y, s, lmbda)
-		s = func_s(np.dot(X, w)) 
-		iter_count.append(iter_count[-1] + 1)
-		loss.append(loss_func(w, y, s, lmbda))
-	plt.plot(iter_count, loss)
-	plt.title("Batch Gradient Descent epsilon:")
-	plt.savefig("batch.png")
 
 # test_batch_grad_1s(2003)
 def read_treated_data(year):
 	data_filename= "data/treated" + str(year) + ".npy"
 	cls_filename = "data/treated" + str(year) + "Cls.npy"
 	data = np.load(data_filename)
-	cls_ = np.load(data_filename)
+	cls_ = np.load(cls_filename)
 	return data, cls_
 
+## TODO: With given epsilon and lambda compte batch gradient descent on a season at the time
+def treat_all_seasons(years):
+	for y in years:
+		data_filename = "data/treated" + str(y) + ".npy"
+		cls_filename = "data/treated" + str(y) + "Cls.npy"
+		season, avTable = get_average_stats(y)
+		data, cls_ = treat_data(season, avTable)
+		np.save(data_filename, data)
+		np.save(cls_filename, cls_)
 
-def validate_batch_grad_1s(year):
-	#TODO:implement this method
-	#train on 80% of reg season games
-	# validate on 20% of the games
-	season_data = get_data_by_season(year)
-	X, y = treat_data(season_data)
 
-	size_training = int(len(X)*.8)
-	training_X = X[:size_training]
-	training_y = y[:size_training]
+# treat_all_seasons([x for x in range(2003, 2019)])
 
-	validating_X = X[size_training:]
-	validating_y = y[size_training:]
-
-	## Run the batch grad with X and Y
-	## will be different then the code below since we are operating on a dataframe object 
-	dim_feature = len(training_X[0])
-	w = np.zeros((dim_feature, 1))
-	X_t = np.transpose(training_X)
-	lmbda = 0.005
-	epsilon = 0.5
-	#compute the first s to have the loss at the first step
-	s = func_s(np.dot(training_X, w))
-	loss = [loss_func(w, training_y, s, lmbda)]
-	iter_count = [0]
-	#loop
-	while iter_count[-1] < 10000:
-		#for each iteration we compute w, the new s and save the loss.
-		w = batch_update(w, epsilon, X_t, training_y, s, lmbda)
-		s = func_s(np.dot(training_X, w)) 
-		iter_count.append(iter_count[-1] + 1)
-		loss.append(loss_func(w, training_y, s, lmbda))
-	print loss
-	plt.plot(iter_count, loss)
-	plt.title("Batch Gradient Descent Training epsilon:")
-	plt.savefig("batch_training.png")
-
-	classification = []
-	for i in xrange(len(validating_X)):
-		cls_ = np.asarray(func_s(np.dot(np.asmatrix(validating_X[i]), w)))[0][0]
-		classification.append(cls_)
-
-	with open("validation_results.txt", "w+") as f:
-		for i, elem in enumerate(classification):
-			f.write(str(elem) + ", " + str(validating_y[i]) + "\n")
-	classification[classification >= .5] = 1
-	classification[classification < .5] = 0
-	print "classification accuracy:" + str(np.sum(classification)/float(len(classification)))
-
-# validate_batch_grad_1s(2003)
-
-def test_batch_grad_1s_on_tourney(year):
-	# season_data = get_data_by_season(year)
-	# X, y= treat_data(season_data)
-	X, y= read_treated_data(year)
-	training_X = X
-	training_y = y
-
-	## Run the batch grad with X and Y
-	## will be different then the code below since we are operating on a dataframe object 
-	dim_feature = len(training_X[0])
-	w = np.ones((dim_feature, 1))
-	X_t = np.transpose(training_X)
-	lmbda = 0.0005
+def get_weights_for_all_years(years):
 	epsilon = 0.00000005
-	#compute the first s to have the loss at the first step
-	s = func_s(np.dot(training_X, w))
-	loss = [loss_func(w, training_y, s, lmbda)]
+	lmbda = 0.0005
+	weight_array = []
+	for year in years:
+		X, y = read_treated_data(year)
+		w = batch_training(X, y, epsilon, lmbda, year)
+#
+
+def batch_training(X, y, epsilon, lmbda, year):
+	dim_feature = len(X[0])
+	w = np.ones((dim_feature, 1))
+	X_t = np.transpose(X)
+	s = func_s(np.dot(X, w))
+	loss = [loss_func(w, y, s, lmbda)]
 	iter_count = [0]
 	#loop
-	while iter_count[-1] < 30000:
+	while iter_count[-1] < 20000:
 		#for each iteration we compute w, the new s and save the loss.
-		w = batch_update(w, epsilon, X_t, training_y, s, lmbda)
-		s = func_s(np.dot(training_X, w)) 
+		w = batch_update(w, epsilon, X_t, y, s, lmbda)
+		s = func_s(np.dot(X, w)) 
 		iter_count.append(iter_count[-1] + 1)
-		loss.append(loss_func(w, training_y, s, lmbda))
+		loss.append(loss_func(w, y, s, lmbda))
 	print w
 	print loss[-1]
 	plt.plot(iter_count, loss)
 	plt.title("Batch Gradient Descent Training epsilon:")
-	plt.savefig("tourney_training.png")
+	training_loss_filename = "tourney_training_" + str(year) + ".png"
+	plt.savefig(training_loss_filename)
+	weight_filename = "weights_" + str(year) + ".npy"
+	np.save(weight_filename, w)
+	# save the weights somewhere
+	return w
 
-	tourney_data = pd.read_csv("data/NCAATourneyDetailedResults.csv")
-	season= tourney_data.loc[tourney_data["Season"] == year]
-	to_classify, answers = treat_data(season)
+# get_weights_for_all_years([x for x in range(2003, 2017)])
+
+# X,y = read_treated_data(2003)
+# print X.shape 
+# print y.shape
+# batch_training(X, y, 0.00000005, 0.0005, 2003)
+def validate_on_year(w, y):
+	to_classify, answers = get_treated_tournament(y)
 	classification = []
 	for i in xrange(len(to_classify)):
 		cls_ = np.asarray(func_s(np.dot(np.asmatrix(to_classify[i]), w)))[0][0]
 		classification.append(cls_)
 	classification = np.array(classification)
-	with open("tourney_test_results.txt", "w+") as f:
+	res_filename = "tourney_" + str(y) + "_test_results.txt"
+	with open(res_filename, "w+") as f:
 		for i, elem in enumerate(classification):
 			f.write(str(elem) + ", " + str(answers[i]) + "\n")
 	classification[classification >= .5] = 1
 	classification[classification < .5] = 0
-	classification = classification.reshape((64, 1))
+	classification = classification.reshape((classification.shape[0], 1))
 	print "classification accuracy: " + str(np.sum(classification == answers)/float(len(answers)))
 
-test_batch_grad_1s_on_tourney(2003)
+def validate_on_years(years):
+	for year in years:
+		data_filename = "weights_" + str(year) + ".npy"
+		w = np.load(data_filename)
+		validate_on_year(w, year)
 
-## TODO: graph error rate for different learning rates training on validiting on a season at the time
-def find_eps_lmd(year, eps_arr, lmbda_arr):
-	season_data = get_data_by_season(year)
-	X, y = treat_data(season_data)
-	for i in range(len(eps_arr)):
-		for j in range(len(lmbda_arr)):
-			## Run the batch grad with X and Y
-			## will be different then the code below since we are operating on a dataframe object 
-			dim_feature = len(X[0])
-			w = np.zeros((dim_feature, 1))
-			X_t = np.transpose(X)
-			epsilon = eps_arr[i]
-			lmbda = lmbda_arr[j]
-			#compute the first s to have the loss at the first step
-			s = func_s(np.dot(X, w))
-			loss = [loss_func(w, y, s, lmbda)]
-			iter_count = [0]
-			#loop
-			while iter_count[-1] < 50000:
+def get_treated_tournament(year):
+	data_filename = "data/treatedTournament" + str(year) + ".npy"
+	cls_filename = "data/treatedTournament" + str(year) + "Cls.npy"
+	data = np.load(data_filename)
+	cls_ = np.load(cls_filename)
+	return data, cls_
 
-				#for each iteration we compute w, the new s and save the loss.
-				w = batch_update(w, epsilon, X_t, y, s, lmbda)
-				s = func_s(np.dot(X, w)) 
-				iter_count.append(iter_count[-1] + 1)
-				loss.append(loss_func(w, y, s, lmbda))
-			plt.plot(iter_count, loss)
-			plt.title("Batch Gradient Descent epsilon:")
-			plt.savefig("batch_" + str(i) + "_" + str(j) + ".png")
-			plt.clf()
-# find_eps_lmd(2003, [0.04, 0.00005, 0.00000000005, 0.000000000005, 0.000000000005], [0.5, 0.05, 0.0005, 0.000005])
-## TODO: With given epsilon and lambda compte batch gradient descent on a season at the time
-def batch_grad_1s():
-	## TODO: implement this method
-	##  Should return an error rate output on validation for each season
-	##QUESTION: Is there a clever to generate graphs for this? 
-	pass
+# validate_on_years([x for x in range(2003, 2017)])
 
-## TODO: implement gradient descent for all the seasons at once 
-def batch_grad_all():
-	## TODO: implement this method
-	pass
+def treat_tournament_data(years):
+	for y in years:
+		data_filename = "data/treatedTournament" + str(y) + ".npy"
+		cls_filename = "data/treatedTournament" + str(y) + "Cls.npy"
+		tourney_data = pd.read_csv("data/NCAATourneyDetailedResults.csv")
+		tournament_matchup = tourney_data.loc[tourney_data["Season"] == y]
+		tournament_matchup.reset_index(drop=True, inplace=True)
+		season, avTable = get_average_stats(y)
+		to_classify, answers = treat_data(tournament_matchup, avTable)
+		np.save(data_filename, to_classify)
+		np.save(cls_filename, answers)
 
-## TODO: implement gradient for one season at the time, average the weights, validate on 20% combined games of all seasons
-def batch_grad_av():
-	## TODO: impement this method
-	pass
+# treat_tournament_data([x for x in range(2003, 2017)])
+# treat_tournament_data([2017])
+# get_weights_for_all_years([2017])
+# validate_on_years([2017])
 
-## TODO: implement gradient for one season at the time, average the weights, validate on 20% combined games of all seasons
-def batch_grad_av():
-	## TODO: impement this method
-	pass
+def compute_average(years):
+	sum_ = 0
+	total = len(years)
+	for year in years:
+		weight_filename = "weights_" + str(year) + ".npy"
+		sum_ += np.load(weight_filename)
+	av = sum_ / total
+	return av
+
+# av_weights = compute_average([x for x in range(2003, 2018)])
+def graph_average(w):
+	plt.scatter([x for x in range(len(w))], w)
+	plt.title("averaged weights for years 2003 through 2014")
+	plt.savefig("average_weights.png")
+	plt.clf()
+
+# graph_average(av_weights)
 
 
-def run_batch():
-	data = sio.loadmat("data.mat")
-	X = data["X"]
-	y = data["y"]
-	#find dim of feature. 
-	dim_feature = len(X[0])
-	w = np.zeros((dim_feature, 1))
-	X_t = np.transpose(X)
-	lmbda = 0.005
-	epsilon = 0.5
-	#compute the first s to have the loss at the first step
-	s = func_s(np.dot(X, w))
-	loss = [loss_func(w, y, s, lmbda)]
-	iter_count = [0]
-	#loop
-	while iter_count[-1] < 100000:
+def graph_weights(years):
+	for year in years:
+		weight_filename = "weights_" + str(year) + ".npy"
+		w = np.load(weight_filename)
+		plt.scatter([x for x in range(len(w))], w)
+		plt.title("weights for years 2003 through 2014")
+	plt.savefig("plotted_weights.png")
+	plt.clf()
+## Do 2018 work
+#treat season data
+# df = pd.read_csv('data/RegularSeasonDetailedResults_Prelim2018.csv')
+# df = df.loc[df["Season"] == 2018]
+# df.reset_index(drop=True, inplace=True)
+# data, cls_ = treat_data(df)
+# data_filename = "data/treated2018.npy"
+# cls_filename = "data/treated2018Cls.npy"
+# np.save(data_filename, data)
+# np.save(cls_filename, cls_)
 
-		#for each iteration we compute w, the new s and save the loss.
-		w = batch_update(w, epsilon, X_t, y, s, lmbda)
-		s = func_s(np.dot(X, w)) 
-		iter_count.append(iter_count[-1] + 1)
-		loss.append(loss_func(w, y, s, lmbda))
+#compute 2018 weights
+# get_weights_for_all_years([2018])
+# w = get_weights_for_all_years([x for x in range(2003, 2019)])
+# print w
+# validate_on_years([x for x in range(2003, 2018)])
+# graph_weights([x for x in range(2003, 2019)])
+# w_av = compute_average([x for x in range(2003, 2019)])
+# graph_average(w_av)
 
-	plt.plot(iter_count, loss)
-	plt.title("Batch Gradient Descent epsilon:")
-	plt.savefig("batch.png")
+def get_year_t1_t2(ID):
+    """Return a tuple with ints `year`, `team1` and `team2`."""
+    return (int(x) for x in ID.split('_'))
 
+def make_sub():
+	w = compute_average([x for x in range(2003, 2019)])
+	season, avTable = get_average_stats(2018)
+	df_sample_sub = pd.read_csv('data/SampleSubmissionStage2.csv')
+	matchups = np.zeros((2278, 14))
+	for ii, row in df_sample_sub.iterrows():
+		year, t1, t2 = get_year_t1_t2(row.ID)
+		id_1 = t1 - 1000 
+		mat_1 = avTable[id_1]
+		id_2 = t2 - 1000
+		mat_2 = avTable[id_2]
+		diff_mat = mat_1 - mat_2
+		matchups[ii] += diff_mat
 
-def train_batch():
-	data = sio.loadmat("data.mat")
-	X = data["X"]
-	y = data["y"]
-	X = np.apply_along_axis(lambda x: x / np.linalg.norm(x), 1, X)
-	#find dim of feature. 
-	dim_feature = len(X[0])
-	w = np.zeros((dim_feature, 1))
-	X_t = np.transpose(X)
-	lmbda = 0.00005
-	epsilon = .005
-	#compute the first s to have the loss at the first step
-	s = func_s(np.dot(X, w))
-	loss = [loss_func(w, y, s, lmbda)]
-	iter_count = [0]
-	#loop
-	while iter_count[-1] < 500000:
-		#for each iteration we compute w, the new s and save the loss.
-		w = batch_update(w, epsilon, X_t, y, s, lmbda)
-		s = func_s(np.dot(X, w)) 
-		iter_count.append(iter_count[-1] + 1)
-		loss.append(loss_func(w, y, s, lmbda))
-	return w
+	classification = []
+	for i in xrange(len(matchups)):
+		cls_ = np.asarray(func_s(np.dot(np.asmatrix(matchups[i]), w)))[0][0]
+		classification.append(cls_)
+	classification = np.array(classification)
+	df_sample_sub.Pred = classification
 
-def classify_using_batch():
-	w = train_batch()
-	test_data = sio.loadmat("data.mat")["X_test"]
-	classified = []
-	counter = 0
-	for i in range(len(test_data)):
-		cls_ = np.asarray(func_s(np.dot(np.asmatrix(test_data[i]), w)))[0][0]
-		if cls_ >= 0.5:
-			counter += 1
-			classified.append(1)
-		elif cls_ < 0.5:
-			classified.append(0)
-		else: 
-			raise Exception()
-	with open("kaggle_wine_submission.csv", "w+") as f:
-		f.write("Id,Category\n")
-		for i in range(len(classified)):
-			f.write(str(i) + ','+str(classified[i]) + "\n")
-	print counter
-
-def run_stoch():
-	data = sio.loadmat("data.mat")
-	X = data["X"]
-	y = data["y"]
-	norm_X = np.apply_along_axis(lambda x: x / np.linalg.norm(x), 1, X)
-	combined = []
-	for i in range(len(X)):
-		combined.append((norm_X[i], y[i]))
-	dim_feature = len(X[0])
-	w = np.zeros((dim_feature, 1))
-	lmbda = 0.0005
-	epsilon = 0.001
-	loss = []
-	iter_count = [-1]
-	for c in xrange(1):
-		#shuffle the data
-		shuffle(combined)
-		for i in range(len(X)):
-			s_i = stoch_s(np.dot(np.asmatrix(combined[i][0]), w)) #the first s
-			loss.append(loss_func(w, y, func_s(np.dot(norm_X, w)), lmbda))
-			iter_count.append(iter_count[-1] + 1) 
-			w = stoch_update(w, epsilon, np.transpose(np.asmatrix(combined[i][0])), combined[i][1][0], np.asarray(s_i)[0][0], lmbda)
-	plt.plot(iter_count[1:], loss)
-	plt.title("Stochastic Gradient Descent")
-	plt.savefig("stoch.png")
-
-def run_stoch_dec_epsilon():
-	data = sio.loadmat("data.mat")
-	X = data["X"]
-	y = data["y"]
-	norm_X = np.apply_along_axis(lambda x: x / np.linalg.norm(x), 1, X)
-	combined = []
-	for i in range(len(X)):
-		combined.append((norm_X[i], y[i]))
-	dim_feature = len(X[0])
-	w = np.zeros((dim_feature, 1))
-	lmbda = 0.0005
-	epsilon = 0.001
-	loss = []
-	iter_count = [-1]
-	for c in xrange(2):
-		#shuffle the data
-		shuffle(combined)
-		for i in range(0, len(X)):
-			epsilon = epsilon/(i+1)
-			s_i = stoch_s(np.dot(np.asmatrix(combined[i][0]), w)) #the first s
-			loss.append(loss_func(w, y, func_s(np.dot(norm_X, w)), lmbda))
-			iter_count.append(iter_count[-1] + 1) 
-			w = stoch_update(w, epsilon, np.transpose(np.asmatrix(combined[i][0])), combined[i][1][0], np.asarray(s_i)[0][0], lmbda)
-	plt.figure(2)
-	plt.plot(iter_count[1:], loss)
-	plt.title("Stochastic Gradient Descent Decreasing Eps")
-	plt.savefig("stoch_dec.png")
-
-# run_stoch()
-# run_stoch_dec_epsilon()
-
+	print df_sample_sub.head()
+	df_sample_sub.to_csv('logreg_detailedres_diff.csv', index=False)
+	
+make_sub()
